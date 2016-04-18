@@ -1,0 +1,93 @@
+# Run model
+source('simulation.R')
+## transition matrix
+norm.mat <- trans.matrix(k.g = 0.06985, linf = 213.495, beta.g = 1)[[2]]
+
+## Read data file
+datos <- read.dat('data/jf_f3.dat')
+
+## Read Connectivity Matrix
+pela.mat <- read.dat('data/conect_mat.dat')[[3]]
+
+## Stimated parameters
+param <- read.dat('data/jf_f3.par')
+Ro <- exp(param$logR0)
+## Other variables in the data
+datos$size_vector <- with(datos, seq(from = lowersize, to = bigsize, by = sizedelta))
+## Read estimation from ADMB
+est   <- read.dat('../ADMB/jf_f3.rep')
+
+## Just as reminder the order of the zones are
+zones <- c('RC-SC NO', 'RC-SC NE', 'RC-SC SO', 'RC-SC SE', 'AS-NE', 'AS-SE', 'AS-SO', 'AS-NO')
+
+R0        <- exp(param$logR0)                           # Virginal Recruitment
+size.vec  <- with(datos, seq(from = lowersize, to = bigsize, by = sizedelta))
+fecundity <- est$Fecundity                              # Fecundity
+maturity  <- est$Maturity                               # Maturity
+w.l       <- est$WL                                     # Weigth length relationship
+f.selec   <- as.vector(est$Selectivity_fishery[1, ])    # Selec. Fishery
+p.selec   <- est$Selectivity_pot                        # Selectivity of the pot
+rec.pat   <- est$RecShape                               # Recruitment pattern
+mig.pat   <- c(rep(0.3, 28), rep(0.6, 8), rep(1, 67))   # Migration pattern
+res.Rec   <- log(est$Recruitment_REsiduals)             # Recruitment residual
+Rec       <- est$Rec
+start.year <- 1990
+end.year   <- 2011
+
+size.trans.matrix <-
+Kg <- 0.06985
+linf <- 213.5
+beta_g 	1.00
+sd1	2.00
+sdn	4.00
+intervals <- (size.vec + diff(size.vec/2))
+mean.growth <-(linf - (size.vec + diff(size.vec/2)))*(1-exp(-Kg))
+intervals[intervals > linf] <- NA
+intervals[intervals == NA] <- max(intervals)
+
+
+
+
+                                        # Recruitmen
+## Simulation
+
+years.sim <- start.year:end.year
+rec <- vector(mode='numeric',length=length(years.sim))
+for(year in 1: length(years.sim){
+    if( year==start.year){
+        rec[1] <- R0
+        abundance[1] <-
+
+
+#The first calculation
+
+spawner.ini <- sum(fecundity * maturity * abun)
+## the spawner is working ok.....should I continue
+
+
+
+spawner <- c(1,2,3,4,5,6,7,8)
+spawner <- spawner^11
+
+rec.areas     <- with(param, recruitment(spawner, ashape, bshape, res.Rec[1]))
+rec.new.shape <- rec.shp(rec.area.2, pela.mat)
+
+rec.area.2 <- rep(131755.82, 8)
+
+
+
+plot(fecundity)
+
+
+with(est,plot(datos$year[-1],Observed_Catch,pch = 20))
+with(est,lines(datos$year[-1],Predicted_Catch, col = 2))
+x11()
+with(est,plot(datos$yearCPUE,Observed_CPUE,pch = 20))
+with(est,lines(datos$yearCPUE,Predicted_CPUE, col = 2))
+par(mfrow = c(2, 4))
+
+
+for(i in 1 : 8){
+    with(est,plot(datos$tallas, Observed_Length_Frequency[i, ],pch = 20))
+    with(est,lines(datos$tallas, Predicted_Length_Frequency[i, ],col = 2))
+}
