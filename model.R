@@ -64,7 +64,7 @@ Fs         <- with(param, exp(c(logF_1, logF_2, logF_3, logF_4)))
 ##      Equation and models               ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 start.year      <- 1901
-end.year        <- 2011
+end.year        <- 2016
 fecundity       <- fec(a.fec, b.fec, size.vec)                                       # Fecundity
 maturity        <- matu(a.mat, b.mat, size.vec)                                      # Maturity
 w.l             <- alometry.f(a.wl, b.wl, size.vec)                                  # Alometric relationship
@@ -74,12 +74,17 @@ normal.t.matrix <- trans.matrix(size.vec, k.g = 0.06985, linf = 213.495, beta.g 
 mig.pat         <- c(rep(0.3, 28), rep(0.6, 8), rep(1, 67))                          # Migration Pattern (Puerulus - juvenil - adult)
 n.rec.pat       <- rec.pat(size.vec, beta = 0.3, alfa = 45)                          # Normalize recruitment pattern
 h.effort        <- c(0.84, 0.24, 2.32, 0.6, 0.72, 0.8, 1.08, 1.4)
+f.cur           <- c(rep(Fs[1], 29), rep(Fs[2], 51), rep(Fs[3], 19), rep(Fs[4], 12))
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##          Simulation                    ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 n.zones   <- 8
 years.sim <- start.year : end.year
+pcll   <- which(years.sim %in% datos$yearCLL)
+pcpue  <- which(years.sim %in% datos$yearCPUE)
+pcatch <- which(years.sim %in% datos$year)
+
 n.years   <- length(years.sim)
 ## reclut    <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
 ## rec       <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
@@ -89,11 +94,24 @@ n.years   <- length(years.sim)
 ## ## Array for the abundance and the biomass
 ## abundance <- array(0, dim = c(length(zones), length(years.sim), length(size.vec)))
 ## aamig2    <- aamig <- catch <- alive <- abundance
-f.cur     <- c(rep(Fs[1], 29), rep(Fs[2], 51), rep(Fs[3], 19), rep(Fs[4], 12))
 
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
-## ~        At equilibrium    ~ ##
-## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
+
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
+## ~          Estimation function       ~ ##
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
+# I need to deffine the initial condition
+qCPUE   <- 1e-7
+res.Rec <- exp(c(res.Rec, rep(1, 5)))
+f.cur   <- c(f.cur, rep(1, 5))
+Par     <- c(R0, qCPUE, c(Fs, 1), res.Rec)
+
+result <- optim(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
+                          f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
+                          mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, method = "BFGS")
+
+
+
+
 
 output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
                           f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
@@ -101,6 +119,39 @@ output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years
                           projection = FALSE)
 
 
+
+i=1
+dim(out)
+out <- colSums(output.simu$Abundance)[19, ]
+plot(out)
+w.t <- out * w.l
+sum(w.t)/1000000
+se <- round(seq(1,101, length=11))
+tot.n <- NULL
+for(i in 1: (length(se)-1)){
+tot.n[i] <-  sum(w.t[se[i]:(se[i+1]-1)])
+}
+barplot(tot.n)
+        sum(w.l)
+#out <- sum(out)
+out.old <- 862584000
+out-out.old
+
+n <- 11
+seqs <- seq_along(out)
+out <- tapply(out, rep(seqs, each=n)[seqs],FUN=sum)
+out/sum(out)
+
+n <- 10
+seqs <- seq_along(w.l)
+w.t2 <- tapply(w.l, rep(seqs, each=n)[seqs], FUN=mean)
+w.t/sum(w.t)
+
+size.vec
+n <- 10
+seqs <- seq_along(size.vec)
+w.t2 <- tapply(size.vec, rep(seqs, each=n)[seqs], FUN=mean)
+w.t/sum(w.t)
 ##-------------------
 ## Projections
 ##------------------
@@ -296,9 +347,26 @@ plot(years.sim, log(colSums(spawners[1 : 4 , ])), type = 'o', xlim = c(1900, 206
 lines(years.sim, log(est$Spawners[-112]), col = 2)
 lines(seq.years, log(colSums(spawners.proj[1 : 4, ])), col = 4)
 
+64
+116
+166
+214
+
+breaks <- c(0, 116.4591393657, 202.6449897483, 214.4175236044,500)
+prop <- c(sum(est$Number[1, which(size.vec < 64)]),
+          sum(est$Number[1, which(size.vec >= 64  & size.vec < 116)]),
+          sum(est$Number[1, which(size.vec >= 116 & size.vec < 166)]),
+          sum(est$Number[1, which(size.vec >= 166 & size.vec <=  214)]))
+dec <- c(0.2, 0.02, 0.02, 0.002, 0.0002, 0.00002)
+prop <- c(prop, tail(prop, 1) * dec)
+prop <- prop / sum(prop)
+
+/ sum(est$Number[1, ])
 
 
 
+hist(est$Number[1,], breaks=breaks)
+ls()
 
 
 

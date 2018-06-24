@@ -171,7 +171,7 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
     rec       <- matrix(NA, ncol= n.years, nrow = n.zones)
     b.catch   <- v.biomass <- spawners <- rec
     if(!isTRUE(projection)){
-        ## |||||~~~~ In equilibrum ~~~~||||
+        ## |||||~~~~ At equilibrum ~~~~||||
         ## ~ initial recruitment
         rec[, 1]      <- R0
         rec.shape     <- rec.shp(rec[, 1], pela.mat)
@@ -190,9 +190,9 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
         if(any(c(is.null(t.rec.a), is.null(t.rec.b)))){
             cat('\n\tfor projection you need to provide the values for alfa and beta in the spawning equation\n')
         }
-       if(any(c(is.null(alive), is.null(abun.sim)))){
-           cat('\n\t You need to provide the initial abundance')
-       }
+        if(any(c(is.null(alive), is.null(abun.sim)))){
+            cat('\n\t You need to provide the initial abundance')
+        }
         abundance[1 : n.zones, 1, ] <- abun.sim
         for(z in 1 : n.zones){ # loop for the zones
             v.biomass[z, 1]   <- sum(abundance[z, 1, ] *  w.l * f.selec) / 1000000
@@ -256,4 +256,133 @@ aut.rd <- function(years, sigmaz, phi, seed = NULL){
         zt[dt] <- zt[dt - 1] * phi + rd[dt] * sqrt(sigmae)
     }
     return(zt)
+}
+
+
+##' .. content for \description{} (no empty lines) ..
+##'
+##' .. content for \details{} ..
+##' @title Maximum Likelihood Estimator of parameters of multinomial distribution
+##' @param obs Observed values
+##' @param est estimated values
+##' @param ssize sample size
+##' @return likelihood
+##' @author Demiurgo
+multinomial <- function(obs, est, ssize){
+    offset <- rowSums( - 1 *  (ssize * ((obs + 0.001) * log(obs + 0.001))))
+    v      <- rowSums(ssize * ((obs + 0.001) * log(est + 0.001)))
+    output <- sum(- 1 * v - offset)
+    return(output)
+}
+
+##' .. content for \description{} (no empty lines) ..
+##'
+##' .. content for \details{} ..
+##' @title Maximum likelihood for CPUE
+##' @param obs obser4ved values
+##' @param est Estimated values
+##' @param cv coeficient of variation
+##' @return likelihood
+##' @author Demiurgo
+like.normal <- function(obs, est, cv){
+    LL <- 0.5 * sum(log(sqrt(0.2 * cv) * 2 * pi), na.rm = TRUE) + sum((sqrt(log(obs) - log(est)) / (2 * sqrt(cv))), na.rm = TRUE)
+    return(LL)
+}
+
+##' .. content for \description{} (no empty lines) ..
+##'
+##' .. content for \details{} ..
+##' @title Function for the estimation of paramters
+##' @param Par Parameter to stimated,  for this model correspond to R0,  qCPUE, F and recdev
+##' @param M Natural mortality
+##' @param stpnss.h Steepness
+##' @param n.years number of years
+##' @param maturity maturity vector
+##' @param w.l weight at length
+##' @param f.selec fishery selectivity (knife - edge)
+##' @param fecundity fecundity
+##' @param pela.mat matrix of pelagic connectivity
+##' @param bent.mat matrix of benthic connectivity
+##' @param n.zones number of zones
+##' @param mig.pat pattern of migration
+##' @param n.rec.pat recruitment pattern
+##' @param normal.t.matrix Normlaized size transition matrix
+##' @param t.rec.a recruitment parameters (alpha)
+##' @param t.rec.b  recruitment parameter (beta)
+##' @param abun.sim (simulated abundance)
+##' @param f.end final fishing mortality
+##' @param res.rec.end residual recruitments
+##' @return estimated parameters
+##' @author Demiurgo
+hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, fecundity, pela.mat, bent.mat, n.zones, mig.pat,
+                     n.rec.pat, normal.t.matrix){
+    ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
+    ## ~        At equilibrium    ~ ##
+    ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
+    abundance <- array(0, dim = c(n.zones, n.years, length(fecundity)))
+    aamig     <- catch <- alive <- abundance
+    rec       <- matrix(NA, ncol= n.years, nrow = n.zones)
+    b.catch   <- v.biomass <- spawners <- rec
+    ## Paramter for stimation. this part is hardwired
+    R0 <- Par[1]
+    qCPUE <- abs(Par[2])
+    f.cur <- c(rep(log(Par[3]), 29), rep(log(Par[4]), 51), rep(log(Par[5]), 19), rep(log(Par[6]), 12), rep(log(Par[7]), 5))
+    res.Rec <- Par[8 : 123]
+
+    ## |||||~~~~ At equilibrum ~~~~||||
+    ## ~ initial recruitment
+    rec[, 1]      <- R0
+    rec.shape     <- rec.shp(rec[, 1], pela.mat)
+    for(z in 1 : n.zones){ # loop for the zones
+        ##~ Abundance
+        abundance[z, 1, ] <- (n.rec.pat %*% solve(diag(1, dim(normal.t.matrix)) - normal.t.matrix * exp(-M))) * rec.shape[z]
+        ##~ Biomass
+        v.biomass[z, 1] <- sum(abundance[z, 1, ] *  w.l * f.selec) / 1000000
+    }
+    ##~ Spawning biomass at equilibrium
+    S0            <- spawn(fecundity, maturity, colSums(abundance[1 : 4, 1, ])) / 4
+    t.rec.a       <-  (S0 / R0 )  * (1 - (stpnss.h - 0.2) / (0.8 * stpnss.h))
+    t.rec.b       <-  (stpnss.h - 0.2) / (0.8 * stpnss.h * R0)
+    spawners[, 1] <- S0
+    for(year in 2 : n.years){
+        ##~ Recruitment
+        rec[, year]  <-  recruitment(t.rec.a, t.rec.b, spawners[, (year - 1)], exp(res.Rec[year]))
+        ##~ Recruitment by zone after connectivity
+        rec.shape  <- rec.shp(rec[, year], pela.mat)
+        for(z in 1 : n.zones){
+            ## Abundance after Benthic migration
+            aamig[z, year, ]     <- benth.mig(abundance[, year-1, ], bent.mat, mig.pat, z)
+            ## Alive after catch, Natural moratality and migration
+            alive[z, year, ]     <- alive.f(aamig[, year, ], M, f.selec, exp(f.cur[year - 1]), h.effort, z)
+            ## Abundance
+            abundance[z, year, ] <- abund(alive[z, year, ], normal.t.matrix, n.rec.pat, rec.shape[z])
+            ## Catch
+            catch[z, year, ]     <- catch.f(abundance[, year, ], f.selec, exp(f.cur[year]), h.effort, M, z)
+            ## Biomass catch
+            b.catch[z, year]     <- sum(catch[z, year, ] * w.l) / 1000000
+            ## Spawners
+            spawners[z, year]    <- spawn(fecundity, maturity, abundance[z, year, ])
+            ##~ Biomass
+            v.biomass[z, year]   <- sum(abundance[z, year, ] *  w.l * f.selec) / 1000000
+        }
+    }
+    ##----------------------------
+    ## Likelihoods
+    ##---------------------------
+    ## LLCPUE
+    cpue.est <- colSums(v.biomass[, pcpue]) * qCPUE
+    cpue.ll  <- like.normal(obs = datos$cpue, est = cpue.est, cv = rep(0.2, length(pcpue)))
+    ## LLCATCH
+    catch.ll <- like.normal(obs = datos$cpue, est = colSums(b.catch[, pcatch]), cv = rep(1, length(pcatch)))
+    ## LLSIZE
+    lfd.ll   <- multinomial(obs = datos$cll, est = colSums(catch[, pcll, ], na.rm = TRUE, 1), ssize = 100)
+    llike    <- sum(cpue.ll, catch.ll, lfd.ll)
+    output   <- list(Abundance  = abundance,
+                   Catch      = catch,
+                   B.catch    = b.catch,
+                   Spawners   = spawners,
+                   V.biomass  = v.biomass,
+                   Rec        = rec,
+                   likelihood = llike)
+    return(llike)
 }
