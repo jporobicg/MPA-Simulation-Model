@@ -234,10 +234,6 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
     if(!isTRUE(projection)){
         output$Parameters <- list(S0 = S0, t.rec.a = t.rec.a, t.rec.b = t.rec.b)
     }
-                   ## Parameters = ifelse(!isTRUE(projection), list(S0      = S0,
-                   ##                                               t.rec.a = t.rec.a,
-                   ##                                               t.rec.b = t.rec.b), NA))
-
     return(output)
 }
 

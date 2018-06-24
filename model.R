@@ -110,8 +110,10 @@ result <- optim(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = 
                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, method = "BFGS")
 
 
-
-
+R0 <- result$par[1]
+qCPUE <- result$par[2]
+f.cur <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(result$par[5]), 19), rep(exp(result$par[6]), 12), rep(exp(result$par[7]), 5))
+res.Rec <- result$par[8 : 123]
 
 output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
                           f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
