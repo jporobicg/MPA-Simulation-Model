@@ -54,7 +54,7 @@ stpnss.h <- 0.7
 ##     Estimated in ADMB                  ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
-R0         <- est$Rec[1] / 4            # Virginal Recruitment
+R0         <- est$Rec[1] / 8            # Virginal Recruitment
 size.vec   <- with(datos, seq(from = lowersize, to = bigsize, by = sizedelta))
 res.Rec    <- log(est$Recruitment_Residuals)             # Recruitment residual
 Fs         <- with(param, exp(c(logF_1, logF_2, logF_3, logF_4)))
@@ -122,11 +122,11 @@ load(file = 'Estimation.RData')
 R0      <- exp(result$par[1])
 qCPUE   <- exp(result$par[2])
 f.cur   <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(result$par[5]), 19), rep(exp(result$par[6]), 12), rep(exp(result$par[7]), 5))
-res.Rec <- result$par[8 : 123]
+res.Rec2 <- result$par[8 : 123]
 
-output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
+output.simu <- simulation(M = M, R0 = R0, qCPUE = log(qCPUE), stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
                           f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
-                          mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, res.Rec = res.Rec,
+                          mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, res.Rec = res.Rec2,
                           projection = FALSE)
 
 
@@ -136,10 +136,17 @@ output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years
 
 dim(output.simu$Catch)
 par(mfrow = c(2, 2))
+# Total Catch
 plot(years.sim,datos$total_annual_catch)
 lines(years.sim, colSums(output.simu$B.catch[1 : 8, ]), col = 2)
-
+## CPP
+plot(datos$cpue)
+lines(output.simu$CPUE.cpp)
+## Recruitment
 plot(log(colSums(output.simu$Rec)))
+## Recruitment deviations
+plot(log.Rec)
+lines(res.Rec2)
 
 datos$cpue
 

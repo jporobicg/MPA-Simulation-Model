@@ -397,11 +397,11 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     cpue.est <- colSums(v.biomass[, pcpue]) * exp(qCPUE)
     cpue.ll  <- like.normal(obs = datos$cpue, est = cpue.est, cv = rep(0.2, length(pcpue)))
     ## LLCATCH
-    catch.ll <- like.normal(obs = datos$total_annual_catch, est = colSums(b.catch[, pcatch]), cv = rep(1, length(pcatch)))
+    catch.ll <- like.normal(obs = datos$total_annual_catch, est = colSums(b.catch[, pcatch]), cv = rep(0.05, length(pcatch)))
     ## LLSIZE
     lfd.ll   <- multinomial(obs = datos$cll, est = ldf.t, ssize = 100)
     ## recruitment
-    rec.ll <- like.rec(res.Rec, 1)
+    rec.ll <- like.rec(res.Rec, .6)
     ## Total
     llike    <- sum(cpue.ll, catch.ll, lfd.ll,  rec.ll)
     ## likeout
