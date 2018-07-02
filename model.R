@@ -125,7 +125,7 @@ f.cur   <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(r
 res.Rec <- result$par[8 : 123]
 
 output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
-                          f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
+                          f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, res.Rec = res.Rec,
                           projection = FALSE)
 
@@ -139,9 +139,20 @@ par(mfrow = c(2, 2))
 plot(years.sim,datos$total_annual_catch)
 lines(years.sim, colSums(output.simu$B.catch[1 : 8, ]), col = 2)
 
-plot(datos$cll[1, ])
-lines(colSums(output.simu$B.catch[1 : 8, ]), col = 2)
+plot(log(colSums(output.simu$Rec)))
 
+datos$cpue
+
+names(output.simu)
+par(mfrow = c(3, 4))
+for(cll in 1 :  length(pcll)){
+plot(datos$cll[cll, ])
+lines(output.simu$Trap.lfd[cll, ], col = 2)
+}
+
+sum(output.simu$Trap.lfd[1, ])
+
+dim(output.simu$Trap.lfd)
 
 plot(years.sim, colSums(output.simu$B.catch[1 : 8, ]))
 

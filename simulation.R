@@ -164,10 +164,10 @@ alive.f <- function(abun, M, Sel.F, F, effort, zone){
 }
 
 
-simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, projection = FALSE, fecundity, pela.mat, bent.mat, n.zones, mig.pat,
-                       n.rec.pat, normal.t.matrix, res.Rec, t.rec.a = NULL, t.rec.b = NULL, abun.sim = NULL, f.end = NULL, res.rec.end=NULL){
+simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, f.cur, projection = FALSE, fecundity, pela.mat, bent.mat, n.zones, mig.pat,
+                       n.rec.pat, normal.t.matrix, res.Rec, t.rec.a = NULL, t.rec.b = NULL, abun.sim = NULL, f.end = NULL, res.rec.end=NULL, qCPUE){
     abundance <- array(0, dim = c(n.zones, n.years, length(fecundity)))
-    aamig     <- catch <- alive <- abundance
+    aamig     <- catch <- lfd <- alive <- abundance
     rec       <- matrix(NA, ncol= n.years, nrow = n.zones)
     b.catch   <- v.biomass <- spawners <- rec
     if(!isTRUE(projection)){
@@ -180,6 +180,12 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
             abundance[z, 1, ] <- (n.rec.pat %*% solve(diag(1, dim(normal.t.matrix)) - normal.t.matrix * exp(-M))) * rec.shape[z]
             ##~ Biomass
             v.biomass[z, 1] <- sum(abundance[z, 1, ] *  w.l * f.selec) / 1000000
+            ## Catch
+            catch[z, 1, ]   <- catch.f(abundance[, 1, ], f.selec, exp(f.cur[1]), h.effort, M, z)
+            ## ldf
+            lfd[z, 1, ]     <- catch.f(abundance[, 1, ], trap.s, exp(f.cur[1]), h.effort, M, z)
+            ## Catch biomass
+            b.catch[z, 1]   <- sum(catch[z, 1, ] * w.l) / 1000000
         }
         ##~ Spawning biomass at equilibrium
         S0            <- spawn(fecundity, maturity, colSums(abundance[1 : 4, 1, ]))
@@ -198,6 +204,7 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
             v.biomass[z, 1]   <- sum(abundance[z, 1, ] *  w.l * f.selec) / 1000000
             catch[z, 1, ]     <- catch.f(abundance[, 1, ], f.selec, f.end, h.effort, M, z)
             b.catch[z, 1]     <- sum(catch[z, 1, ] * w.l) / 1000000
+            lfd[z, 1, ]       <- catch.f(abundance[, 1, ], trap.s, exp(f.cur[1]), h.effort, M, z)
             spawners[z, 1]    <- spawn(fecundity, maturity, abundance[z, 1, ])
         }
         rec[, 1]    <- recruitment(t.rec.a, t.rec.b, spawners[, 1], exp(res.rec.end))
@@ -217,6 +224,8 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
             abundance[z, year, ] <- abund(alive[z, year, ], normal.t.matrix, n.rec.pat, rec.shape[z])
             ## Catch
             catch[z, year, ]     <- catch.f(abundance[, year, ], f.selec, f.cur[year], h.effort, M, z)
+            ## lfd
+            lfd[z, year, ]       <- catch.f(abundance[, year, ], trap.s, exp(f.cur[year]), h.effort, M, z)
             ## Biomass catch
             b.catch[z, year]     <- sum(catch[z, year, ] * w.l) / 1000000
             ## Spawners
@@ -225,11 +234,16 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, f.cur, 
             v.biomass[z, year]   <- sum(abundance[z, year, ] *  w.l * f.selec) / 1000000
         }
     }
-    output <- list(Abundance  = abundance,
+    lfd.t <- colSums(lfd[, pcll, ], na.rm = TRUE, 1)
+    lfd.t <- t(apply(lfd.t, 1, function(x) x / sum(x, na.rm = TRUE)))
+    cpue.est <- colSums(v.biomass[, pcpue]) * exp(qCPUE)
+        output <- list(Abundance  = abundance,
                    Catch      = catch,
                    B.catch    = b.catch,
                    Spawners   = spawners,
                    V.biomass  = v.biomass,
+                   Trap.lfd   = lfd.t,
+                   CPUE.cpp   = cpue.est,
                    Rec        = rec)
     if(!isTRUE(projection)){
         output$Parameters <- list(S0 = S0, t.rec.a = t.rec.a, t.rec.b = t.rec.b)
@@ -385,7 +399,6 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     ## LLCATCH
     catch.ll <- like.normal(obs = datos$total_annual_catch, est = colSums(b.catch[, pcatch]), cv = rep(1, length(pcatch)))
     ## LLSIZE
-    rowSums(datos$cll)
     lfd.ll   <- multinomial(obs = datos$cll, est = ldf.t, ssize = 100)
     ## recruitment
     rec.ll <- like.rec(res.Rec, 1)
