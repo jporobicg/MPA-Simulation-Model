@@ -86,6 +86,7 @@ pcpue  <- which(years.sim %in% datos$yearCPUE)
 pcatch <- which(years.sim %in% datos$year)
 
 n.years   <- length(years.sim)
+
 ## reclut    <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
 ## rec       <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
 ## rec2      <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
@@ -99,20 +100,28 @@ n.years   <- length(years.sim)
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
 ## ~          Estimation function       ~ ##
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
-# I need to deffine the initial condition
-qCPUE   <- 1e-7
-res.Rec <- exp(c(res.Rec, rep(1, 5)))
-f.cur   <- c(f.cur, rep(1, 5))
-Par     <- c(R0, qCPUE, c(Fs, 1), res.Rec)
+## Run model
+source('simulation.R')
 
+                                        # I need to deffine the initial condition
+qCPUE   <- log(1e-7)
+log.Rec <- c(res.Rec, rep(1, 5))
+Par     <- c(log(R0), qCPUE, log(c(Fs, 1)), log.Rec)
+## debug(hindcast)
+## hindcast(Par, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
+##                           f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
+##                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix)#
+## library(compiler)
+## compile(hindcast)
 result <- optim(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
-                          f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
+                          f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, method = "BFGS")
 
-
-R0 <- result$par[1]
-qCPUE <- result$par[2]
-f.cur <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(result$par[5]), 19), rep(exp(result$par[6]), 12), rep(exp(result$par[7]), 5))
+#save(result, file = 'Estimation.RData')
+load(file = 'Estimation.RData')
+R0      <- exp(result$par[1])
+qCPUE   <- exp(result$par[2])
+f.cur   <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(result$par[5]), 19), rep(exp(result$par[6]), 12), rep(exp(result$par[7]), 5))
 res.Rec <- result$par[8 : 123]
 
 output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
@@ -122,49 +131,33 @@ output.simu <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.years
 
 
 
-i=1
-dim(out)
-out <- colSums(output.simu$Abundance)[19, ]
-plot(out)
-w.t <- out * w.l
-sum(w.t)/1000000
-se <- round(seq(1,101, length=11))
-tot.n <- NULL
-for(i in 1: (length(se)-1)){
-tot.n[i] <-  sum(w.t[se[i]:(se[i+1]-1)])
-}
-barplot(tot.n)
-        sum(w.l)
-#out <- sum(out)
-out.old <- 862584000
-out-out.old
 
-n <- 11
-seqs <- seq_along(out)
-out <- tapply(out, rep(seqs, each=n)[seqs],FUN=sum)
-out/sum(out)
 
-n <- 10
-seqs <- seq_along(w.l)
-w.t2 <- tapply(w.l, rep(seqs, each=n)[seqs], FUN=mean)
-w.t/sum(w.t)
 
-size.vec
-n <- 10
-seqs <- seq_along(size.vec)
-w.t2 <- tapply(size.vec, rep(seqs, each=n)[seqs], FUN=mean)
-w.t/sum(w.t)
+dim(output.simu$Catch)
+par(mfrow = c(2, 2))
+plot(years.sim,datos$total_annual_catch)
+lines(years.sim, colSums(output.simu$B.catch[1 : 8, ]), col = 2)
+
+plot(datos$cll[1, ])
+lines(colSums(output.simu$B.catch[1 : 8, ]), col = 2)
+
+
+plot(years.sim, colSums(output.simu$B.catch[1 : 8, ]))
+
+
 ##-------------------
 ## Projections
 ##------------------
 summary(output.simu)
+#length(f.cur)
 pars <- output.simu$Parameters
 ## Abundance of the last year of simulation
-abun.sim     <- output.simu$Abundance[1 : 8, 111, ]
+abun.sim     <- output.simu$Abundance[1 : 8, 116, ]
 ## Last f for the simulation
-f.end        <- f.cur[111]
+f.end        <- f.cur[116]
 ## last recruitment
-res.rec.end  <- res.Rec[111]
+res.rec.end  <- res.Rec[116]
 ## Years of projection
 n.years      <- 100
 seq.years    <- seq(from = 2012, length = n.years)
@@ -194,10 +187,15 @@ output.proj  <- simulation(M = M, R0 = R0, stpnss.h = stpnss.h, n.years = n.year
 ## summary(output.proj)
 
 ## output.proj$Abundance
+datos
+
+## plot proportion by Age
+
 
 ## Plots
 par(mar = c(1, 1, 1, 1), oma = c(1, 1, 1, 1), mfrow = c(2, 2))
 with(output.simu, plot(years.sim, colSums(B.catch[1 : 4 , ]), type = 'o', xlim = c(1900, 2060)))
+
 with(output.proj, lines(seq.years, colSums(B.catch[1 : 4, ]), col = 'blue'))
 
 with(output.simu, plot(years.sim, colSums(V.biomass[1 : 4, ]), type = 'o', xlim = c(1900, 2060)))
