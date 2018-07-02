@@ -326,7 +326,7 @@ like.rec <- function(rec, cv){
 ##' @return estimated parameters
 ##' @author Demiurgo
 hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, fecundity, pela.mat, bent.mat, n.zones, mig.pat,
-                     n.rec.pat, normal.t.matrix, phase = 1){
+                     n.rec.pat, normal.t.matrix, phase = 1, cvs){
     ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
     ## ~        At equilibrium    ~ ##
     ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
@@ -397,13 +397,13 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     ldf.t <- t(apply(lfd.t, 1, function(x) x / sum(x, na.rm = TRUE)))
     ## LLCPUE
     cpue.est <- colSums(v.biomass[, pcpue]) * exp(qCPUE)
-    cpue.ll  <- like.normal(obs = datos$cpue, est = cpue.est, cv = rep(0.2, length(pcpue)))
+    cpue.ll  <- like.normal(obs = datos$cpue, est = cpue.est, cv = rep(cvs[1], length(pcpue)))
     ## LLCATCH
-    catch.ll <- like.normal(obs = datos$total_annual_catch, est = colSums(b.catch[, pcatch]), cv = rep(0.05, length(pcatch)))
+    catch.ll <- like.normal(obs = datos$total_annual_catch, est = colSums(b.catch[, pcatch]), cv = rep(cvs[2], length(pcatch)))
     ## LLSIZE
-    lfd.ll   <- multinomial(obs = datos$cll, est = ldf.t, ssize = 100)
+    lfd.ll   <- multinomial(obs = datos$cll, est = ldf.t, ssize = cvs[3])
     ## recruitment
-    rec.ll <- like.rec(res.Rec, .6)
+    rec.ll <- like.rec(res.Rec, csv[4])
     ## Total
     llike    <- sum(cpue.ll, catch.ll, lfd.ll,  rec.ll)
     ## likeout
