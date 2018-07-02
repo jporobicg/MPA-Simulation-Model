@@ -326,7 +326,7 @@ like.rec <- function(rec, cv){
 ##' @return estimated parameters
 ##' @author Demiurgo
 hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, fecundity, pela.mat, bent.mat, n.zones, mig.pat,
-                     n.rec.pat, normal.t.matrix){
+                     n.rec.pat, normal.t.matrix, phase = 1){
     ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
     ## ~        At equilibrium    ~ ##
     ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
@@ -335,12 +335,14 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     rec       <- matrix(NA, ncol= n.years, nrow = n.zones)
     b.catch   <- v.biomass <- spawners <- rec
     ## Paramter for stimation. this part is hardwired
-    R0 <- Par[1]
-    qCPUE <- Par[2]
-    f.cur <- c(rep(Par[3], 29), rep(Par[4], 51), rep(Par[5], 19),
-               rep(Par[6], 12), rep(Par[7], 5))
-
-    res.Rec <- Par[8 : 123]
+    R0      <- 13.3416
+    f.cur   <- c(rep(1, 29), rep(1, 51), rep(1, 19), rep(1, 12), rep(1, 5))
+    res.Rec <- rep(0, length(Par[8 : 123]))
+    ## updating values
+    if(phase >= 1) qCPUE   <- Par[2]
+    if(phase >= 2) R0      <- Par[1]
+    if(phase >= 3) f.cur   <- c(rep(Par[3], 29), rep(Par[4], 51), rep(Par[5], 19), rep(Par[6], 12), rep(Par[7], 5))
+    if(phase >= 4) res.Rec <- Par[8 : 123]
     ## |||||~~~~ At equilibrum ~~~~||||
     ## ~ initial recruitment
     rec[, 1]      <- exp(R0) / n.zones
@@ -358,7 +360,7 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
         b.catch[z, 1]   <- sum(catch[z, 1, ] * w.l) / 1000000
     }
     ##~ Spawning biomass at equilibrium
-    S0            <- spawn(fecundity, maturity, colSums(abundance[1 : 4, 1, ]))
+    S0            <- spawn(fecundity, maturity, colSums(abundance[1 : n.zones, 1, ]))
     t.rec.a       <-  (S0 / exp(R0) )  * (1 - (stpnss.h - 0.2) / (0.8 * stpnss.h))
     t.rec.b       <-  (stpnss.h - 0.2) / (0.8 * stpnss.h * exp(R0))
     spawners[, 1] <- S0 / n.zones
