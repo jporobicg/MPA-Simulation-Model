@@ -295,7 +295,7 @@ like.normal <- function(obs, est, cv){
 }
 
 like.rec <- function(rec, cv){
-    LL <- 0.5 * cv *sum(rec ^ 2)
+    LL <- 0.5 * cv * sum(rec ^ 2)
     return(LL)
 }
 
@@ -403,7 +403,7 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     ## LLSIZE
     lfd.ll   <- multinomial(obs = datos$cll, est = ldf.t, ssize = cvs[3])
     ## recruitment
-    rec.ll <- like.rec(res.Rec, csv[4])
+    rec.ll <- like.rec(res.Rec, cvs[4])
     ## Total
     llike    <- sum(cpue.ll, catch.ll, lfd.ll,  rec.ll)
     ## likeout

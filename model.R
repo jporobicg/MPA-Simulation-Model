@@ -4,6 +4,7 @@
 rm(list = ls())
 ## Run model
 source('simulation.R')
+library('optimr')
 ## Read data file
 datos <- read.dat('data/jf_f3.dat')
 ## Stimated parameters
@@ -54,7 +55,7 @@ stpnss.h <- 0.7
 ##     Estimated in ADMB                  ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
-R0         <- est$Rec[1] / 8            # Virginal Recruitment
+R0         <- est$Rec[1] / 8            # Virginal Recruitment devided by the number of zones 8 for JFRE
 size.vec   <- with(datos, seq(from = lowersize, to = bigsize, by = sizedelta))
 res.Rec    <- log(est$Recruitment_Residuals)             # Recruitment residual
 Fs         <- with(param, exp(c(logF_1, logF_2, logF_3, logF_4)))
@@ -81,20 +82,10 @@ f.cur           <- c(rep(Fs[1], 29), rep(Fs[2], 51), rep(Fs[3], 19), rep(Fs[4], 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 n.zones   <- 8
 years.sim <- start.year : end.year
-pcll   <- which(years.sim %in% datos$yearCLL)
-pcpue  <- which(years.sim %in% datos$yearCPUE)
-pcatch <- which(years.sim %in% datos$year)
-
+pcll      <- which(years.sim %in% datos$yearCLL)
+pcpue     <- which(years.sim %in% datos$yearCPUE)
+pcatch    <- which(years.sim %in% datos$year)
 n.years   <- length(years.sim)
-
-## reclut    <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
-## rec       <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
-## rec2      <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
-## rec3      <- matrix(NA, ncol= length(years.sim), nrow = n.zones)
-## b.catch   <- v.biomass <- spawners  <- rec
-## ## Array for the abundance and the biomass
-## abundance <- array(0, dim = c(length(zones), length(years.sim), length(size.vec)))
-## aamig2    <- aamig <- catch <- alive <- abundance
 
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
@@ -107,32 +98,34 @@ source('simulation.R')
 qCPUE   <- log(1e-7)
 log.Rec <- c(res.Rec, rep(1, 5))
 Par     <- c(log(R0), qCPUE, log(c(Fs, 1)), log.Rec)
-## debug(hindcast)
-## hindcast(Par, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
-##                           f.selec = f.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
-##                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix)#
-## library(compiler)
-## compile(hindcast)
-result <- optim(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
-                          f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
-                          mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, method = "BFGS")
+cvs     <- c(0.2, 0.1, 100, 0.6) ## csv for cpue, catch, lfd and recdev
+## The estimation model can use different fases for parameter estimation
+## but in this case is not necesary because I used the estiamted values form ADMB
+## result <- optim(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
+##                 f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
+##                 mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, phase = 1, cvs = cvs, method = "BFGS", hessian = TRUE)
 
-#save(result, file = 'Estimation.RData')
+
+result <- optimr(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
+                f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
+                mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, phase = 5, cvs = cvs, control=list(save.failures = TRUE, maxit = 100000))
+
+
+
+
+#save(result, file = 'Estimation2.RData')
 load(file = 'Estimation.RData')
 R0      <- exp(result$par[1])
 qCPUE   <- exp(result$par[2])
 f.cur   <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(result$par[5]), 19), rep(exp(result$par[6]), 12), rep(exp(result$par[7]), 5))
 res.Rec2 <- result$par[8 : 123]
 
-cvs <- (0.2, 0.05, 100, 0.6) ## csv for cpue, catch, lfd and recdev
+
 output.simu <- simulation(M = M, R0 = R0, qCPUE = log(qCPUE), stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
                           f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, res.Rec = res.Rec2,
                           projection = FALSE)
 
-x = data.frame(rec = unlist(res.Rec2))
-type(x)
-write(t(unlist(x)) , 'out.csv')
 dim(output.simu$Catch)
 par(mfrow = c(2, 2))
 # Total Catch
