@@ -330,6 +330,7 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
     ## ~        At equilibrium    ~ ##
     ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ##
+    if(length(dim(pela.mat)) > 2)
     abundance <- array(0, dim = c(n.zones, n.years, length(fecundity)))
     aamig     <- catch <- alive <- lfd <- abundance
     rec       <- matrix(NA, ncol= n.years, nrow = n.zones)
@@ -346,7 +347,8 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
     ## |||||~~~~ At equilibrum ~~~~||||
     ## ~ initial recruitment
     rec[, 1]      <- exp(R0) / n.zones
-    rec.shape     <- rec.shp(rec[, 1], pela.mat)
+    pela.avg    <- rowMeans(pela.mat, dim=2)
+    rec.shape     <- rec.shp(rec[, 1], pela.avg)
     for(z in 1 : n.zones){ # loop for the zones
         ##~ Abundance
         abundance[z, 1, ] <- (n.rec.pat %*% solve(diag(1, dim(normal.t.matrix)) - normal.t.matrix * exp(-M))) * rec.shape[z]
@@ -368,7 +370,12 @@ hindcast <- function(Par, M, stpnss.h, n.years, maturity, w.l, f.selec, trap.s, 
         ##~ Recruitment
         rec[, year]  <-  recruitment(t.rec.a, t.rec.b, spawners[, (year - 1)], exp(res.Rec[year]))
         ##~ Recruitment by zone after connectivity
-        rec.shape  <- rec.shp(rec[, year], pela.mat)
+        if(year < 51 || year > (50 + dim(pela.mat)[3])){
+            pela.con <- pela.avg
+        } else {
+            pela.con <- pela.mat[, , year - 50]
+        }
+        rec.shape  <- rec.shp(rec[, year], pela.con)
         for(z in 1 : n.zones){
             ## Abundance after Benthic migration
             aamig[z, year, ]     <- benth.mig(abundance[, year-1, ], bent.mat, mig.pat, z)

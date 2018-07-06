@@ -20,7 +20,9 @@ zones <- c('RC-SC NO', 'RC-SC NE', 'RC-SC SO', 'RC-SC SE', 'AS-NE', 'AS-SE', 'AS
 
 ## Pelagic connectivity matrix
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pela.mat <- read.dat('data/conect_mat.dat')[[2]]
+load('/home/demiurgo/Documents/2016/Papers/JF-MPA/Conectivity_model/IBM_simulation/output/Connect_mat.rda')
+#pela.mat <- read.dat('data/conect_mat.dat')[[2]]
+pela.mat <- connect.l[c(3,1,4,2,5,6,8,7), c(3,1,4,2,5,6,8,7),]
 #pela.mat <- diag(1, 8) ## Matrix to test the model, with one population
 
 ## Benthic connectivity matrix
@@ -98,17 +100,13 @@ source('simulation.R')
 qCPUE   <- log(1e-7)
 log.Rec <- c(res.Rec, rep(1, 5))
 Par     <- c(log(R0), qCPUE, log(c(Fs, 1)), log.Rec)
-cvs     <- c(0.2, 0.1, 100, 0.6) ## csv for cpue, catch, lfd and recdev
+cvs     <- c(0.2, 0.05, 100, 0.8) ## csv for cpue, catch, lfd and recdev
+
 ## The estimation model can use different fases for parameter estimation
 ## but in this case is not necesary because I used the estiamted values form ADMB
-## result <- optim(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
-##                 f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
-##                 mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, phase = 1, cvs = cvs, method = "BFGS", hessian = TRUE)
-
-
 result <- optimr(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, w.l = w.l,
                 f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
-                mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, phase = 5, cvs = cvs, control=list(save.failures = TRUE, maxit = 100000))
+                mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, phase = 5, cvs = cvs, control=list(method = "BFGS", hessian = TRUE, save.failures = TRUE, maxit = 100000))
 
 
 
