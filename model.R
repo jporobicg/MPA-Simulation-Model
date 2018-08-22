@@ -100,7 +100,7 @@ source('simulation.R')
 qCPUE   <- log(1e-7)
 log.Rec <- c(res.Rec, rep(1, 5))
 Par     <- c(log(R0), qCPUE, log(c(Fs, 1)), log.Rec)
-cvs     <- c(0.2, 0.05, 100, 0.8) ## csv for cpue, catch, lfd and recdev
+cvs     <- c(0.4, 0.01, 100, 1) ## csv for cpue, catch, lfd and recdev
 
 ## The estimation model can use different fases for parameter estimation
 ## but in this case is not necesary because I used the estiamted values form ADMB
@@ -112,13 +112,15 @@ result <- optimr(par = Par, fn = hindcast, M = M, stpnss.h = stpnss.h, n.years =
 
 
 #save(result, file = 'Estimation2.RData')
-load(file = 'Estimation.RData')
+#load(file = 'Estimation.RData')
 R0      <- exp(result$par[1])
 qCPUE   <- exp(result$par[2])
 f.cur   <- c(rep(exp(result$par[3]), 29), rep(exp(result$par[4]), 51), rep(exp(result$par[5]), 19), rep(exp(result$par[6]), 12), rep(exp(result$par[7]), 5))
 res.Rec2 <- result$par[8 : 123]
 
+plot(res.Rec2)
 
+#debug(simulation)
 output.simu <- simulation(M = M, R0 = R0, qCPUE = log(qCPUE), stpnss.h = stpnss.h, n.years = n.years, maturity = maturity, f.cur = f.cur, w.l = w.l,
                           f.selec = f.selec, trap.s = p.selec, fecundity = fecundity, pela.mat = pela.mat, bent.mat = bent.mat, n.zones = 8,
                           mig.pat = mig.pat, n.rec.pat = n.rec.pat, normal.t.matrix = normal.t.matrix, res.Rec = res.Rec2,

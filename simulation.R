@@ -173,8 +173,9 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, trap.s,
     if(!isTRUE(projection)){
         ## |||||~~~~ At equilibrum ~~~~||||
         ## ~ initial recruitment
+        pela.avg    <- rowMeans(pela.mat, dim = 2)
         rec[, 1]      <- R0 / n.zones
-        rec.shape     <- rec.shp(rec[, 1], pela.mat)
+        rec.shape     <- rec.shp(rec[, 1], pela.avg)
         for(z in 1 : n.zones){ # loop for the zones
             ##~ Abundance
             abundance[z, 1, ] <- (n.rec.pat %*% solve(diag(1, dim(normal.t.matrix)) - normal.t.matrix * exp(-M))) * rec.shape[z]
@@ -213,8 +214,13 @@ simulation <- function(M, R0, stpnss.h, n.years, maturity, w.l, f.selec, trap.s,
     for(year in 2 : n.years){
         ##~ Recruitment
         rec[, year]  <-  recruitment(t.rec.a, t.rec.b, spawners[, (year - 1)], exp(res.Rec[year]))
+        if(year < 51 || year > (50 + dim(pela.mat)[3])){
+            pela.con <- pela.avg
+        } else {
+            pela.con <- pela.mat[, , year - 50]
+        }
+        rec.shape  <- rec.shp(rec[, year], pela.con)
         ##~ Recruitment by zone after connectivity
-        rec.shape  <- rec.shp(rec[, year], pela.mat)
         for(z in 1 : n.zones){
             ## Abundance after Benthic migration
             aamig[z, year, ]     <- benth.mig(abundance[, year-1, ], bent.mat, mig.pat, z)
